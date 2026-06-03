@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PopLaunch — Popup & Shortcut Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --card: #1a1a26;
+    --border: #2a2a40;
+    --accent: #00e5ff;
+    --accent2: #ff3dff;
+    --accent3: #ffe03d;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --success: #3dffb0;
+    --danger: #ff4d4d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid bg */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .glow-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.18;
+  }
+  .orb1 { width: 500px; height: 500px; background: var(--accent); top: -100px; right: -100px; }
+  .orb2 { width: 400px; height: 400px; background: var(--accent2); bottom: -80px; left: -80px; }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .logo-icon {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 0 24px rgba(0,229,255,0.4);
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .tagline {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* Section headers */
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.4;
+  }
+
+  /* Launcher */
+  .url-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .url-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .url-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,255,0.12);
+  }
+
+  .url-input::placeholder { color: var(--muted); }
+
+  .options-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .size-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    width: 120px;
+    transition: border-color 0.2s;
+  }
+  .size-input:focus { border-color: var(--accent); }
+
+  .size-label {
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 14px 24px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #0099b5);
+    color: #000;
+    box-shadow: 0 4px 20px rgba(0,229,255,0.3);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0,229,255,0.5);
+  }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-ghost:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .btn-danger {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--danger);
+    padding: 6px 10px;
+    font-size: 13px;
+    border-radius: 6px;
+  }
+  .btn-danger:hover { background: rgba(255,77,77,0.1); }
+
+  .btn-sm {
+    padding: 8px 14px;
+    font-size: 12px;
+    border-radius: 7px;
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 9999;
+    background: var(--card);
+    border: 1px solid var(--success);
+    border-radius: 10px;
+    padding: 14px 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--success);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+
+  /* Shortcuts */
+  .shortcuts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .shortcut-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: border-color 0.2s, transform 0.2s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shortcut-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .shortcut-card:hover .shortcut-launch-hint {
+    opacity: 1;
+  }
+
+  .shortcut-launch-hint {
+    position: absolute;
+    top: 8px; right: 10px;
+    font-size: 9px;
+    font-family: 'Space Mono', monospace;
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .shortcut-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+  }
+
+  .shortcut-info { flex: 1; min-width: 0; }
+
+  .shortcut-name {
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .shortcut-url {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 3px;
+  }
+
+  .shortcut-key {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 8px;
+    color: var(--accent3);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Add shortcut form */
+  .add-shortcut-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 16px;
+    display: none;
+  }
+  .add-shortcut-form.open { display: block; }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .form-field { display: flex; flex-direction: column; gap: 6px; }
+  .form-field label {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  .form-input {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .form-input:focus { border-color: var(--accent); }
+
+  /* Chromebook shortcuts reference */
+  .ref-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .ref-table tr { border-bottom: 1px solid var(--border); }
+  .ref-table tr:last-child { border-bottom: none; }
+
+  .ref-table td {
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+
+  .ref-table td:first-child {
+    color: var(--muted);
+    width: 50%;
+  }
+
+  .kbd-group { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+
+  kbd {
+    display: inline-flex;
+    align-items: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent3);
+    white-space: nowrap;
+  }
+
+  .plus { color: var(--muted); font-size: 12px; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--muted);
+    border: none;
+    background: transparent;
+    font-family: 'Syne', sans-serif;
+  }
+
+  .tab.active {
+    background: var(--card);
+    color: var(--accent);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+  /* Delete btn on card */
+  .shortcut-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 14px;
+    padding: 4px;
+    border-radius: 5px;
+    transition: color 0.2s, background 0.2s;
+    line-height: 1;
+  }
+  .icon-btn:hover { color: var(--danger); background: rgba(255,77,77,0.1); }
+  .icon-btn.launch:hover { color: var(--accent); background: rgba(0,229,255,0.1); }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .url-row { flex-direction: column; }
+    .options-row { gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="glow-orb orb1"></div>
+<div class="glow-orb orb2"></div>
+
+<div id="toast">✓ Popup launched!</div>
+
+<div class="container">
+  <header>
+    <div class="logo-icon">🚀</div>
+    <div>
+      <h1>Pop<span>Launch</span></h1>
+      <div class="tagline">Popup & Shortcut Manager</div>
+    </div>
+  </header>
+
+  <!-- POPUP LAUNCHER -->
+  <div class="section-label">Popup Launcher</div>
+  <div class="card">
+    <div class="url-row">
+      <input type="url" class="url-input" id="mainUrl" placeholder="https://example.com" />
+      <button class="btn btn-primary" onclick="launchPopup()">
+        <span>⚡</span> Launch
+      </button>
+    </div>
+    <div class="options-row">
+      <div class="size-label">
+        <span>WIDTH</span>
+        <input type="number" class="size-input" id="popWidth" value="800" min="200" max="3840" />
+      </div>
+      <div class="size-label">
+        <span>HEIGHT</span>
+        <input type="number" class="size-input" id="popHeight" value="600" min="200" max="2160" />
+      </div>
+      <div class="size-label">
+        <span>PRESET</span>
+        <select class="size-input" onchange="applyPreset(this.value)" style="cursor:pointer">
+          <option value="">Custom</option>
+          <option value="600,400">Small (600×400)</option>
+          <option value="800,600">Medium (800×600)</option>
+          <option value="1024,768">Large (1024×768)</option>
+          <option value="1280,720">HD (1280×720)</option>
+          <option value="1920,1080">FHD (1920×1080)</option>
+        </select>
+      </div>
+    </div>
+    <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);padding:12px 14px;background:var(--surface);border-radius:8px;border:1px solid var(--border);">
+      <span style="color:var(--accent2)">javascript:</span>window.open(<span id="previewUrl" style="color:var(--accent3)">'https://example.com'</span>, <span style="color:var(--success)">'Popup'</span>, <span style="color:var(--text)">'width=<span id="previewW">800</span>,height=<span id="previewH">600</span>'</span>);
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="section-label">Shortcuts & Reference</div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('my-shortcuts')">My Shortcuts</button>
+    <button class="tab" onclick="switchTab('chromebook')">Chromebook Keys</button>
+    <button class="tab" onclick="switchTab('chrome-browser')">Chrome Browser</button>
+  </div>
+
+  <!-- MY SHORTCUTS -->
+  <div class="tab-panel active" id="tab-my-shortcuts">
+    <div id="shortcuts-grid" class="shortcuts-grid"></div>
+    <button class="btn btn-ghost" onclick="toggleAddForm()" id="addBtn">
+      <span>＋</span> Add Shortcut
+    </button>
+
+    <div class="add-shortcut-form" id="addForm">
+      <div class="form-grid">
+        <div class="form-field">
+          <label>NAME</label>
+          <input type="text" class="form-input" id="sName" placeholder="Google Drive" />
+        </div>
+        <div class="form-field">
+          <label>ICON (emoji)</label>
+          <input type="text" class="form-input" id="sIcon" placeholder="📁" maxlength="2" />
+        </div>
+        <div class="form-field" style="grid-column:1/-1">
+          <label>URL</label>
+          <input type="url" class="form-input" id="sUrl" placeholder="https://drive.google.com" />
+        </div>
+        <div class="form-field">
+          <label>WIDTH</label>
+          <input type="number" class="form-input" id="sWidth" value="1000" />
+        </div>
+        <div class="form-field">
+          <label>HEIGHT</label>
+          <input type="number" class="form-input" id="sHeight" value="700" />
+        </div>
+        <div class="form-field" style="grid-column:1/-1">
+          <label>KEYBOARD SHORTCUT (optional)</label>
+          <input type="text" class="form-input" id="sKey" placeholder="e.g. Ctrl+Shift+G" />
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary btn-sm" onclick="addShortcut()">Save Shortcut</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleAddForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHROMEBOOK SHORTCUTS -->
+  <div class="tab-panel" id="tab-chromebook">
+    <div class="card" style="margin-bottom:0">
+      <table class="ref-table">
+        <tr>
+          <td>Open new window</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>N</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Open new tab</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>T</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Open new incognito window</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Shift</kbd><span class="plus">+</span><kbd>N</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Switch to next window</td>
+          <td><div class="kbd-group"><kbd>Alt</kbd><span class="plus">+</span><kbd>Tab</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Switch to previous window</td>
+          <td><div class="kbd-group"><kbd>Alt</kbd><span class="plus">+</span><kbd>Shift</kbd><span class="plus">+</span><kbd>Tab</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Show all windows (Overview)</td>
+          <td><div class="kbd-group"><kbd>[]||</kbd> (Overview key)</div></td>
+        </tr>
+        <tr>
+          <td>Snap window left</td>
+          <td><div class="kbd-group"><kbd>Alt</kbd><span class="plus">+</span><kbd>[</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Snap window right</td>
+          <td><div class="kbd-group"><kbd>Alt</kbd><span class="plus">+</span><kbd>]</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Maximize window</td>
+          <td><div class="kbd-group"><kbd>Alt</kbd><span class="plus">+</span><kbd>=</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Minimize window</td>
+          <td><div class="kbd-group"><kbd>Alt</kbd><span class="plus">+</span><kbd>-</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Take screenshot</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Show Windows</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Partial screenshot</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Shift</kbd><span class="plus">+</span><kbd>Show Windows</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Lock screen</td>
+          <td><div class="kbd-group"><kbd>Search</kbd><span class="plus">+</span><kbd>L</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Open Files app</td>
+          <td><div class="kbd-group"><kbd>Shift</kbd><span class="plus">+</span><kbd>Alt</kbd><span class="plus">+</span><kbd>M</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Open launcher / search</td>
+          <td><div class="kbd-group"><kbd>Search</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Adjust volume up/down</td>
+          <td><div class="kbd-group"><kbd>Vol Up</kbd> / <kbd>Vol Down</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Adjust brightness</td>
+          <td><div class="kbd-group"><kbd>Bright Up</kbd> / <kbd>Bright Down</kbd></div></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- CHROME BROWSER SHORTCUTS -->
+  <div class="tab-panel" id="tab-chrome-browser">
+    <div class="card" style="margin-bottom:0">
+      <table class="ref-table">
+        <tr>
+          <td>Address bar</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>L</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Reload page</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>R</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Hard reload (skip cache)</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Shift</kbd><span class="plus">+</span><kbd>R</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Close current tab</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>W</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Reopen closed tab</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Shift</kbd><span class="plus">+</span><kbd>T</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Switch to next tab</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Tab</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Go to tab 1–8</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>1</kbd>–<kbd>8</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Go to last tab</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>9</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Zoom in / out</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>+</kbd> / <kbd>-</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Reset zoom</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>0</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Find on page</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>F</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Open DevTools</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Shift</kbd><span class="plus">+</span><kbd>I</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Bookmark this page</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>D</kbd></div></td>
+        </tr>
+        <tr>
+          <td>History</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>H</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Downloads</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>J</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Print</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>P</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Save page</td>
+          <td><div class="kbd-group"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>S</kbd></div></td>
+        </tr>
+        <tr>
+          <td>Full screen (F11 equivalent)</td>
+          <td><div class="kbd-group"><kbd>Search</kbd><span class="plus">+</span><kbd>4</kbd></div></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Live preview update
+  const mainUrl = document.getElementById('mainUrl');
+  const popWidth = document.getElementById('popWidth');
+  const popHeight = document.getElementById('popHeight');
+
+  function updatePreview() {
+    document.getElementById('previewUrl').textContent = `'${mainUrl.value || 'https://example.com'}'`;
+    document.getElementById('previewW').textContent = popWidth.value || '800';
+    document.getElementById('previewH').textContent = popHeight.value || '600';
+  }
+
+  mainUrl.addEventListener('input', updatePreview);
+  popWidth.addEventListener('input', updatePreview);
+  popHeight.addEventListener('input', updatePreview);
+
+  function applyPreset(val) {
+    if (!val) return;
+    const [w, h] = val.split(',');
+    popWidth.value = w;
+    popHeight.value = h;
+    updatePreview();
+  }
+
+  function launchPopup(url, w, h) {
+    const u = url || mainUrl.value.trim();
+    const pw = w || parseInt(popWidth.value) || 800;
+    const ph = h || parseInt(popHeight.value) || 600;
+    if (!u) { alert('Please enter a URL first!'); return; }
+    const finalUrl = u.startsWith('http') ? u : 'https://' + u;
+
+    // Try popup window first; if browser blocks it, fall back to new tab
+    const popup = window.open(finalUrl, 'PopupWindowName', `width=${pw},height=${ph},scrollbars=yes,resizable=yes`);
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      // Blocked — open in new tab instead
+      window.open(finalUrl, '_blank');
+      showToast('Opened in new tab (popups blocked) 📄');
+    } else {
+      popup.focus();
+      showToast('Popup launched! ⚡');
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // Shortcuts storage
+  let shortcuts = JSON.parse(localStorage.getItem('popLaunchShortcuts') || '[]');
+
+  // Default shortcuts
+  if (shortcuts.length === 0) {
+    shortcuts = [
+      { id: 1, name: 'Google', icon: '🔍', url: 'https://google.com', w: 1000, h: 700, key: '' },
+      { id: 2, name: 'YouTube', icon: '▶️', url: 'https://youtube.com', w: 1200, h: 750, key: '' },
+      { id: 3, name: 'Gmail', icon: '📧', url: 'https://mail.google.com', w: 1100, h: 800, key: '' },
+    ];
+    saveShortcuts();
+  }
+
+  function saveShortcuts() {
+    localStorage.setItem('popLaunchShortcuts', JSON.stringify(shortcuts));
+  }
+
+  function renderShortcuts() {
+    const grid = document.getElementById('shortcuts-grid');
+    if (shortcuts.length === 0) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🚀</div>No shortcuts yet.<br>Add one below!</div>`;
+      return;
+    }
+    grid.innerHTML = shortcuts.map(s => `
+      <div class="shortcut-card" data-id="${s.id}">
+        <span class="shortcut-launch-hint">CLICK TO LAUNCH ↗</span>
+        <div class="shortcut-icon">${s.icon || '🔗'}</div>
+        <div class="shortcut-info">
+          <div class="shortcut-name">${s.name}</div>
+          <div class="shortcut-url">${s.url}</div>
+        </div>
+        ${s.key ? `<div class="shortcut-key">${s.key}</div>` : ''}
+        <div class="shortcut-actions">
+          <button class="icon-btn del-btn" data-id="${s.id}" title="Delete">✕</button>
+        </div>
+      </div>
+    `).join('');
+
+    grid.querySelectorAll('.shortcut-card').forEach(card => {
+      card.addEventListener('click', function(e) {
+        if (e.target.classList.contains('del-btn')) return;
+        const s = shortcuts.find(x => x.id == card.dataset.id);
+        if (s) launchPopup(s.url, s.w, s.h);
+      });
+    });
+
+    grid.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        shortcuts = shortcuts.filter(s => s.id != btn.dataset.id);
+        saveShortcuts();
+        renderShortcuts();
+        showToast('Shortcut removed');
+      });
+    });
+  }
+
+  let addFormOpen = false;
+  function toggleAddForm() {
+    addFormOpen = !addFormOpen;
+    const form = document.getElementById('addForm');
+    const btn = document.getElementById('addBtn');
+    form.classList.toggle('open', addFormOpen);
+    btn.querySelector('span').textContent = addFormOpen ? '✕' : '＋';
+    btn.childNodes[1].textContent = addFormOpen ? ' Cancel' : ' Add Shortcut';
+    if (!addFormOpen) { btn.querySelector('span').textContent = '＋'; btn.childNodes[1].textContent = ' Add Shortcut'; }
+  }
+
+  function addShortcut() {
+    const name = document.getElementById('sName').value.trim();
+    const icon = document.getElementById('sIcon').value.trim();
+    const url  = document.getElementById('sUrl').value.trim();
+    const w    = parseInt(document.getElementById('sWidth').value) || 1000;
+    const h    = parseInt(document.getElementById('sHeight').value) || 700;
+    const key  = document.getElementById('sKey').value.trim();
+
+    if (!name || !url) { alert('Name and URL are required!'); return; }
+    const finalUrl = url.startsWith('http') ? url : 'https://' + url;
+
+    shortcuts.push({ id: Date.now(), name, icon: icon || '🔗', url: finalUrl, w, h, key });
+    saveShortcuts();
+    renderShortcuts();
+
+    // Reset form
+    ['sName','sIcon','sUrl','sKey'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('sWidth').value = 1000;
+    document.getElementById('sHeight').value = 700;
+
+    addFormOpen = true;
+    toggleAddForm();
+    showToast('Shortcut added! ✓');
+  }
+
+  // Keyboard shortcut listener
+  document.addEventListener('keydown', function(e) {
+    shortcuts.forEach(s => {
+      if (!s.key) return;
+      const parts = s.key.toLowerCase().split('+').map(p => p.trim());
+      const ctrl = parts.includes('ctrl');
+      const shift = parts.includes('shift');
+      const alt = parts.includes('alt');
+      const key = parts.find(p => !['ctrl','shift','alt'].includes(p));
+
+      if (e.ctrlKey === ctrl && e.shiftKey === shift && e.altKey === alt && e.key.toLowerCase() === key) {
+        e.preventDefault();
+        launchPopup(s.url, s.w, s.h);
+        showToast(`Launching ${s.name}... ⚡`);
+      }
+    });
+  });
+
+  // Tab switching
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      const ids = ['my-shortcuts','chromebook','chrome-browser'];
+      t.classList.toggle('active', ids[i] === tab);
+    });
+    document.querySelectorAll('.tab-panel').forEach(p => {
+      p.classList.toggle('active', p.id === 'tab-' + tab);
+    });
+  }
+
+  // Init
+  renderShortcuts();
+  updatePreview();
+</script>
+</body>
+</html>
